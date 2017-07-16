@@ -1,0 +1,8 @@
+LORA:
+   TBD
+
+UDP server: port 5309
+
+{ "type": "getall" }
+
+{ "type": "posupdate", "callsign": "CALL", "lat": 123456789, "long": 987654321, "isaccurate": true }
