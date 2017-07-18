@@ -20,7 +20,7 @@ MAGIC1 = 0x2c
 MAGIC2 = 0x0b
 def posToDict(pos):
     return {
-        'callsign': pos.callsign,
+        'callsign': pos.callsign.decode('utf-8').rstrip(),
         'lat': pos.lat,
         'long': pos.long,
         'isaccurate': pos.isaccurate,
@@ -38,7 +38,7 @@ lan.bind(("", lanport))
 lan.setblocking(False)
 
 # Keep track of recent lan clients. Map from address to last seen time.
-# We'll stop sending to a client after 5 minutes
+# We'll stop sending to a client after 10 minutes
 lanclients = {}
 
 # Array of position updates seen in this round of the main loop
@@ -110,7 +110,7 @@ def handleLanGetAll(msg, addr):
 
 def handleLanPosUpdate(msg, addr):
     try:
-        pos = PositionUpdate(MAGIC1, MAGIC2, msg['callsign'], msg['lat'], msg['long'], msg['isaccurate'])
+        pos = PositionUpdate(MAGIC1, MAGIC2, msg['callsign'].encode('utf-8'), msg['lat'], msg['long'], msg['isaccurate'])
         posUpdates.append(pos)
         positions[pos.callsign] = (posToDict(pos), time.time())
     except KeyError:
