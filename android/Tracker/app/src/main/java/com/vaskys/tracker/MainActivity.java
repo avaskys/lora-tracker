@@ -3,6 +3,7 @@ package com.vaskys.tracker;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
+import android.widget.Toast;
 
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
@@ -16,6 +17,10 @@ import org.mapsforge.map.reader.MapFile;
 import org.mapsforge.map.rendertheme.InternalRenderTheme;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class MainActivity extends Activity {
     // name of the map file in the external storage
@@ -24,9 +29,37 @@ public class MainActivity extends Activity {
 
     private MapView mapView;
 
+    private void copyStream(InputStream is, OutputStream os) throws IOException {
+        final int BUF_SIZE = 1024;
+        byte[] bytes = new byte[BUF_SIZE];
+        for (;;) {
+            int count = is.read(bytes, 0, BUF_SIZE);
+            if (count == -1)
+                break;
+            os.write(bytes, 0, count);
+        }
+    }
+
+    private void copyAssets() throws IOException {
+        for (String name : MAP_FILES) {
+            File f = new File(getCacheDir(), name);
+            if (!f.exists()) {
+                InputStream is = getAssets().open(name);
+                OutputStream os = new FileOutputStream(f);
+                copyStream(is, os);
+            }
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        try {
+            copyAssets();
+        } catch (IOException ioe) {
+            Toast.makeText(this, "Failed to copy assets: " + ioe.getMessage(), Toast.LENGTH_SHORT).show();
+        }
 
         AndroidGraphicFactory.createInstance(this.getApplication());
 
@@ -48,7 +81,7 @@ public class MainActivity extends Activity {
         MultiMapDataStore mapDataStore = new MultiMapDataStore(MultiMapDataStore.DataPolicy.RETURN_FIRST);
 
         for (String file : MAP_FILES) {
-            MapDataStore mf = new MapFile(new File(Environment.getExternalStorageDirectory(), file));
+            MapDataStore mf = new MapFile(new File(getCacheDir(), file));
             mapDataStore.addMapDataStore(mf, false, false);
         }
 
@@ -60,9 +93,9 @@ public class MainActivity extends Activity {
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
         // BRC
-        //this.mapView.setCenter(new LatLong(40.786315, -119.206562));
+        this.mapView.setCenter(new LatLong(40.786315, -119.206562));
         // SF
-        this.mapView.setCenter(new LatLong(37.765730, -122.418266));
+        //this.mapView.setCenter(new LatLong(37.765730, -122.418266));
         this.mapView.setZoomLevel((byte) 14);
     }
 
