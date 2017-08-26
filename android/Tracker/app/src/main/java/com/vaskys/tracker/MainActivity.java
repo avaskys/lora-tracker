@@ -3,6 +3,9 @@ package com.vaskys.tracker;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import org.mapsforge.core.model.LatLong;
@@ -93,10 +96,25 @@ public class MainActivity extends Activity {
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
         // BRC
-        this.mapView.setCenter(new LatLong(40.786315, -119.206562));
+        //LatLong loc = new LatLong(40.786315, -119.206562);
         // SF
-        //this.mapView.setCenter(new LatLong(37.765730, -122.418266));
+        LatLong loc = new LatLong(37.765730, -122.418266);
+        this.mapView.setCenter(loc);
         this.mapView.setZoomLevel((byte) 14);
+
+
+        // FIXME: goes elsewhere
+        final LayoutInflater inflater = LayoutInflater.from(this);
+        final Button button = (Button) inflater.inflate(R.layout.pointer_bubble, null);
+        button.setText("BRC BABY");
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "Clicked", Toast.LENGTH_SHORT).show();
+            }
+        });
+        this.mapView.addView(button, new MapView.LayoutParams(MapView.LayoutParams.WRAP_CONTENT, MapView.LayoutParams.WRAP_CONTENT,
+                loc, MapView.LayoutParams.Alignment.BOTTOM_CENTER));
     }
 
     @Override
