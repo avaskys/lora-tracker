@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <EditTextPreference android:title="Callsign"
+        android:key="callsign"
+        android:summary="Four-character call sign that will be broadcast to others"
+        android:maxLength="4" />
+</PreferenceScreen>

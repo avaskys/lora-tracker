@@ -1,11 +1,17 @@
 package com.vaskys.tracker;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.media.audiofx.BassBoost;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.constraint.ConstraintLayout;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import org.mapsforge.core.model.LatLong;
@@ -67,7 +73,8 @@ public class MainActivity extends Activity {
         AndroidGraphicFactory.createInstance(this.getApplication());
 
         this.mapView = new MapView(this);
-        setContentView(this.mapView);
+        setContentView(R.layout.activity_main);
+        ((FrameLayout)findViewById(R.id.map_placeholder)).addView(mapView);
 
         this.mapView.setClickable(true);
         this.mapView.getMapScaleBar().setVisible(true);
@@ -75,12 +82,16 @@ public class MainActivity extends Activity {
         this.mapView.setZoomLevelMin((byte) 10);
         this.mapView.setZoomLevelMax((byte) 20);
 
-        // create a tile cache of suitable size
+        // Initialize preferences
+        //ListView drawerList = (ListView) findViewById(R.id.left_drawer);
+        //drawerList.setAdapter(new ArrayAdapter<>(this,
+        //        R.layout.drawer_list_item, mPlanetTitles));
+
+
         TileCache tileCache = AndroidUtil.createTileCache(this, "mapcache",
                 mapView.getModel().displayModel.getTileSize(), 1f,
                 this.mapView.getModel().frameBufferModel.getOverdrawFactor());
 
-        // tile renderer layer using internal render theme
         MultiMapDataStore mapDataStore = new MultiMapDataStore(MultiMapDataStore.DataPolicy.RETURN_FIRST);
 
         for (String file : MAP_FILES) {
@@ -92,7 +103,6 @@ public class MainActivity extends Activity {
                 this.mapView.getModel().mapViewPosition, AndroidGraphicFactory.INSTANCE);
         tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.DEFAULT);
 
-        // only once a layer is associated with a mapView the rendering starts
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
         // BRC
@@ -118,9 +128,22 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+
+        Intent intent = new Intent(LocationWatcherService.ACTION_START, null, this, LocationWatcherService.class);
+        startService(intent);
+    }
+
+    @Override
     protected void onDestroy() {
         this.mapView.destroyAll();
         AndroidGraphicFactory.clearResourceMemoryCache();
         super.onDestroy();
+    }
+
+    public void openSettings(View view) {
+        Intent intent = new Intent(this, SettingsActivity.class);
+        startActivity(intent);
     }
 }
