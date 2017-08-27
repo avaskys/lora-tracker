@@ -119,8 +119,8 @@ public class LocationWatcherService extends Service {
     private class NetworkSendThread implements Runnable {
         @Override
         public void run() {
-            try {a
-                String ip = PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("ip", "192.168.0.151");
+            try {
+                String ip = PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("ip", "192.168.0.254");
                 InetAddress addr = InetAddress.getByName(ip);
 
                 byte[] toSend;
