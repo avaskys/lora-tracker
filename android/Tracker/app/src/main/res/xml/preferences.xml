@@ -4,4 +4,7 @@
         android:key="callsign"
         android:summary="Four-character call sign that will be broadcast to others"
         android:maxLength="4" />
+    <EditTextPreference android:title="Tracker IP"
+        android:key="ip"
+        android:summary="IP address to use to communicate with the tracker" />
 </PreferenceScreen>

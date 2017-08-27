@@ -1,11 +1,15 @@
 package com.vaskys.tracker;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.audiofx.BassBoost;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.constraint.ConstraintLayout;
+import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -30,13 +34,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.MessageFormat;
+import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class MainActivity extends Activity {
     // name of the map file in the external storage
     private static final String[] MAP_FILES = { "hood.map", "brc.map" };
 
-
     private MapView mapView;
+    private PosReceiver posReceiver = new PosReceiver();
+    private ConcurrentMap<String, RenderedPos> renderedPosMap = new ConcurrentHashMap<>();
 
     private void copyStream(InputStream is, OutputStream os) throws IOException {
         final int BUF_SIZE = 1024;
@@ -111,28 +120,24 @@ public class MainActivity extends Activity {
         LatLong loc = new LatLong(37.765730, -122.418266);
         this.mapView.setCenter(loc);
         this.mapView.setZoomLevel((byte) 14);
-
-
-        // FIXME: goes elsewhere
-        final LayoutInflater inflater = LayoutInflater.from(this);
-        final Button button = (Button) inflater.inflate(R.layout.pointer_bubble, null);
-        button.setText("BRC BABY");
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Clicked", Toast.LENGTH_SHORT).show();
-            }
-        });
-        this.mapView.addView(button, new MapView.LayoutParams(MapView.LayoutParams.WRAP_CONTENT, MapView.LayoutParams.WRAP_CONTENT,
-                loc, MapView.LayoutParams.Alignment.BOTTOM_CENTER));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
+        IntentFilter filter = new IntentFilter(LocationWatcherService.POS_BROADCAST_ACTION);
+        LocalBroadcastManager.getInstance(this).registerReceiver(posReceiver, filter);
+
         Intent intent = new Intent(LocationWatcherService.ACTION_START, null, this, LocationWatcherService.class);
         startService(intent);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(posReceiver);
     }
 
     @Override
@@ -145,5 +150,51 @@ public class MainActivity extends Activity {
     public void openSettings(View view) {
         Intent intent = new Intent(this, SettingsActivity.class);
         startActivity(intent);
+    }
+
+    private class PosReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String callsign = intent.getStringExtra("callsign");
+            double lat = intent.getIntExtra("lat", 0) / 1000000.0;
+            double lon = intent.getIntExtra("long", 0) / 1000000.0;
+            int age = intent.getIntExtra("age", 0);
+            LatLong loc = new LatLong(lat, lon);
+
+            RenderedPos rp = renderedPosMap.get(callsign);
+            if (rp == null) {
+                rp = new RenderedPos();
+                renderedPosMap.put(callsign, rp);
+
+                final LayoutInflater inflater = LayoutInflater.from(MainActivity.this);
+                final Button button = (Button) inflater.inflate(R.layout.pointer_bubble, null);
+                final RenderedPos closureRp = rp;
+                button.setText(callsign);
+                button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        int curSecs = ((int) new Date().getTime() / 1000);
+                        String msg =  MessageFormat.format("{0} last seen {1} seconds ago", callsign, curSecs - closureRp.lastSeenSecs);
+                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                    }
+                });
+                mapView.addView(button, new MapView.LayoutParams(MapView.LayoutParams.WRAP_CONTENT, MapView.LayoutParams.WRAP_CONTENT,
+                        loc, MapView.LayoutParams.Alignment.BOTTOM_CENTER));
+
+                rp.pin = button;
+            }
+            else {
+                mapView.updateViewLayout(rp.pin, new MapView.LayoutParams(MapView.LayoutParams.WRAP_CONTENT, MapView.LayoutParams.WRAP_CONTENT,
+                        loc, MapView.LayoutParams.Alignment.BOTTOM_CENTER));
+            }
+
+            // Should probably synchronize rp but YOLO
+            rp.lastSeenSecs = ((int) new Date().getTime() / 1000) - age;
+        }
+    }
+
+    private class RenderedPos {
+        int lastSeenSecs;
+        Button pin;
     }
 }

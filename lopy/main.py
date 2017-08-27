@@ -8,14 +8,15 @@ import ujson
 import utime
 
 # Format of LoRa messages
+# 4 bytes: header (ignored) sent by RadioHead driver
 # 2 bytes: magic number: (0x2c, 0x0b)
 # 4 bytes: UTF-8 callsign, padded with nulls if necessary
 # 4 bytes: Sender latitude, millionths of a degree, little endian, WGS 84
 # 4 bytes: Sender longitude, millionths of a degree, little endian, WGS 84
 # 1 byte: Boolean, is sender accurate
-wanformat = '<2b4s2ib'
+wanformat = '<i2b4s2ib'
 wansize = struct.calcsize(wanformat)
-PositionUpdate = ucollections.namedtuple('PositionUpdate', ('magic1', 'magic2', 'callsign', 'lat', 'long', 'isaccurate'))
+PositionUpdate = ucollections.namedtuple('PositionUpdate', ('rhheader', 'magic1', 'magic2', 'callsign', 'lat', 'long', 'isaccurate'))
 MAGIC1 = 0x2c
 MAGIC2 = 0x0b
 def posToDict(pos):
@@ -27,7 +28,9 @@ def posToDict(pos):
     }
 
 # Initialize LoRa socket
-lora = LoRa(mode=LoRa.LORA)
+#lora = LoRa(mode=LoRa.LORA, tx_power=20, bandwidth=LoRa.BW_125KHZ, sf=12, coding_rate=LoRa.CODING_4_8)
+# Attempting to match Drew/Mel's LoRa config
+lora = LoRa(mode=LoRa.LORA, tx_power=20, bandwidth=LoRa.BW_125KHZ, sf=7, coding_rate=LoRa.CODING_4_5, public=False)
 wan = socket.socket(socket.AF_LORA, socket.SOCK_RAW)
 wan.setblocking(False)
 
@@ -110,7 +113,7 @@ def handleLanGetAll(msg, addr):
 
 def handleLanPosUpdate(msg, addr):
     try:
-        pos = PositionUpdate(MAGIC1, MAGIC2, msg['callsign'].encode('utf-8'), msg['lat'], msg['long'], msg['isaccurate'])
+        pos = PositionUpdate(0, MAGIC1, MAGIC2, msg['callsign'].encode('utf-8'), msg['lat'], msg['long'], msg['isaccurate'])
         posUpdates.append(pos)
         positions[pos.callsign] = (posToDict(pos), time.time())
     except KeyError:

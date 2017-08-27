@@ -4,11 +4,11 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.location.Location;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.preference.PreferenceManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -36,6 +36,8 @@ public class LocationWatcherService extends Service {
 
     public static final String ACTION_START = "start";
     public static final String ACTION_STOP = "stop";
+
+    public static final String POS_BROADCAST_ACTION = "pos_broadcast";
 
     @Override
     public void onCreate() {
@@ -72,7 +74,8 @@ public class LocationWatcherService extends Service {
 
             startForeground(ONGOING_NOTIFICATION_ID, notification);
 
-            sendQueue.add("testing123".getBytes());
+            // Get all known locations
+            sendQueue.add("{\"type\":\"getall\"}".getBytes());
 
             LocationRequest lr = new LocationRequest();
             lr.setInterval(60000);
@@ -116,9 +119,9 @@ public class LocationWatcherService extends Service {
     private class NetworkSendThread implements Runnable {
         @Override
         public void run() {
-            try {
-                // FIXME
-                InetAddress addr = InetAddress.getByName("192.168.0.12");
+            try {a
+                String ip = PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("ip", "192.168.0.151");
+                InetAddress addr = InetAddress.getByName(ip);
 
                 byte[] toSend;
                 while ((toSend = sendQueue.take()) != null) {
@@ -145,7 +148,25 @@ public class LocationWatcherService extends Service {
                     DatagramPacket dp = new DatagramPacket(buf, buf.length);
                     sock.receive(dp);
 
-                    logErr("Received: " + dp.toString());
+                    try {
+                        JSONObject jo = new JSONObject(new String(dp.getData()));
+
+                        Intent update = new Intent(POS_BROADCAST_ACTION);
+                        update.putExtra("callsign", jo.getString("callsign"));
+                        update.putExtra("lat", jo.getInt("lat"));
+                        update.putExtra("long", jo.getInt("long"));
+                        if (jo.has("age")) {
+                            update.putExtra("age", jo.getInt("age"));
+                        }
+                        else {
+                            update.putExtra("age", 0);
+                        }
+
+                        LocalBroadcastManager.getInstance(LocationWatcherService.this).sendBroadcast(update);
+                    }
+                    catch (JSONException je) {
+                        logErr("Tracker: Unexpected network data received");
+                    }
                 }
             }
             catch (SocketException se) {
@@ -165,8 +186,8 @@ public class LocationWatcherService extends Service {
 
             try {
                 JSONObject jo = new JSONObject();
-                jo.put("callsign", PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("callsign", "NONE"));
                 jo.put("type", "posupdate");
+                jo.put("callsign", PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("callsign", "NONE"));
                 jo.put("lat", lat);
                 jo.put("long", lon);
                 jo.put("isaccurate", true); /* FIXME */
