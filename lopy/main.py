@@ -31,8 +31,9 @@ def log(str):
     print('%d: %s' % (time.time(), str))
 
 # Initialize LoRa socket
-#lora = LoRa(mode=LoRa.LORA, tx_power=20, bandwidth=LoRa.BW_125KHZ, sf=12, coding_rate=LoRa.CODING_4_8)
-# Attempting to match Drew/Mel's LoRa config
+# This would be setModemConfig(Bw125Cr48Sf4096) on the RFM95. Slower, longer-range
+#lora = LoRa(mode=LoRa.LORA, tx_power=20, bandwidth=LoRa.BW_125KHZ, sf=12, coding_rate=LoRa.CODING_4_8, public=False)
+# Attempting to match the default RFM95 LoRa config
 lora = LoRa(mode=LoRa.LORA, tx_power=20, bandwidth=LoRa.BW_125KHZ, sf=7, coding_rate=LoRa.CODING_4_5, public=False)
 wan = socket.socket(socket.AF_LORA, socket.SOCK_RAW)
 wan.setblocking(False)

@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.media.audiofx.BassBoost;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
@@ -91,12 +92,6 @@ public class MainActivity extends Activity {
         this.mapView.setZoomLevelMin((byte) 10);
         this.mapView.setZoomLevelMax((byte) 20);
 
-        // Initialize preferences
-        //ListView drawerList = (ListView) findViewById(R.id.left_drawer);
-        //drawerList.setAdapter(new ArrayAdapter<>(this,
-        //        R.layout.drawer_list_item, mPlanetTitles));
-
-
         TileCache tileCache = AndroidUtil.createTileCache(this, "mapcache",
                 mapView.getModel().displayModel.getTileSize(), 1f,
                 this.mapView.getModel().frameBufferModel.getOverdrawFactor());
@@ -114,10 +109,15 @@ public class MainActivity extends Activity {
 
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
-        // BRC
-        //LatLong loc = new LatLong(40.786315, -119.206562);
-        // SF
-        LatLong loc = new LatLong(37.765730, -122.418266);
+        LatLong loc;
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isSF", false)) {
+            // SF
+            loc = new LatLong(37.765730, -122.418266);
+        }
+        else {
+            // BRC
+            loc = new LatLong(40.786315, -119.206562);
+        }
         this.mapView.setCenter(loc);
         this.mapView.setZoomLevel((byte) 14);
     }

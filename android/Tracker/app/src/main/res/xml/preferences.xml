@@ -7,4 +7,11 @@
     <EditTextPreference android:title="Tracker IP"
         android:key="ip"
         android:summary="IP address to use to communicate with the tracker" />
+    <EditTextPreference android:title="Update Interval"
+        android:key="interval"
+        android:inputType="number"
+        android:summary="Interval, in seconds, to send updates" />
+    <CheckBoxPreference android:title="Location: SF"
+        android:key="isSF"
+        android:summary="Check if testing the tracker in San Francisco" />
 </PreferenceScreen>

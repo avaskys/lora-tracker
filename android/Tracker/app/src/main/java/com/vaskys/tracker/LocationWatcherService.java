@@ -78,8 +78,16 @@ public class LocationWatcherService extends Service {
             sendQueue.add("{\"type\":\"getall\"}".getBytes());
 
             LocationRequest lr = new LocationRequest();
-            lr.setInterval(60000);
-            lr.setFastestInterval(30000);
+            String intervalStr = PreferenceManager.getDefaultSharedPreferences(this).getString("interval", "60");
+            int interval = 60;
+            try {
+                interval = Integer.parseInt(intervalStr);
+            }
+            catch (NumberFormatException nfe) {
+                // We'll stay with 60
+            }
+            lr.setInterval(interval * 1000);
+            lr.setFastestInterval(interval * 500);
             lr.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationClient.requestLocationUpdates(lr, locCb, null);
         }
