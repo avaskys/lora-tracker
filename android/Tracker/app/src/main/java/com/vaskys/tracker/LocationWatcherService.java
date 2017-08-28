@@ -120,21 +120,23 @@ public class LocationWatcherService extends Service {
         @Override
         public void run() {
             try {
-                String ip = PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("ip", "192.168.0.254");
-                InetAddress addr = InetAddress.getByName(ip);
-
                 byte[] toSend;
                 while ((toSend = sendQueue.take()) != null) {
-                    DatagramPacket dp = new DatagramPacket(toSend, toSend.length, addr, 5309);
-                    sock.send(dp);
+                    try {
+                        String ip = PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("ip", "192.168.0.254");
+                        InetAddress addr = InetAddress.getByName(ip);
+
+                        DatagramPacket dp = new DatagramPacket(toSend, toSend.length, addr, 5309);
+                        sock.send(dp);
+                    }
+                    catch (IOException ioe) {
+                        logErr("IO Error in NetworkSendThread: " + ioe.getMessage());
+                        //stopSelf();
+                    }
                 }
             }
-            catch (IOException ioe) {
-                logErr("IO Error in NetworkSendThread: " + ioe.getMessage());
-                //stopSelf();
-            }
             catch (InterruptedException ie) {
-                // hmmmmm
+               logErr("InterruptedException??");
             }
         }
     }

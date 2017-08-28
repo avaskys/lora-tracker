@@ -27,6 +27,9 @@ def posToDict(pos):
         'isaccurate': pos.isaccurate,
     }
 
+def log(str):
+    print('%d: %s' % (time.time(), str))
+
 # Initialize LoRa socket
 #lora = LoRa(mode=LoRa.LORA, tx_power=20, bandwidth=LoRa.BW_125KHZ, sf=12, coding_rate=LoRa.CODING_4_8)
 # Attempting to match Drew/Mel's LoRa config
@@ -53,16 +56,16 @@ positions = {}
 def recvWan():
     data = wan.recv(wansize)
     while len(data) > 0:
-        print('Received (WAN)')
+        log('Received (WAN)')
         if len(data) == wansize:
             pos = PositionUpdate(*struct.unpack(wanformat, data))
             if pos.magic1 == MAGIC1 and pos.magic2 == MAGIC2:
                 posUpdates.append(pos)
                 positions[pos.callsign] = (posToDict(pos), time.time())
             else:
-                print('Unexpected WAN magic numbers: saw 0x%x 0x%x' % (pos.magic1, pos.magic2))
+                log('Unexpected WAN magic numbers: saw 0x%x 0x%x' % (pos.magic1, pos.magic2))
         else:
-            print('Unexpected WAN message size: saw %d, expected %d' % (len(data), wansize))
+            log('Unexpected WAN message size: saw %d, expected %d' % (len(data), wansize))
         data = wan.recv(wansize)
 
 def maybeRecvLan():
@@ -77,15 +80,15 @@ def maybeRecvLan():
 def recvLan():
     (data, addr) = maybeRecvLan()
     while len(data) > 0:
-        print('Received (LAN) from %s' % str(addr))
+        log('Received (LAN) from %s' % str(addr))
         try:
             msg = ujson.loads(data.decode('utf-8'))
             lanclients[addr] = time.time()
             lanHandlers[msg['type']](msg, addr)
         except ValueError:
-            print('Error decoding JSON')
+            log('Error decoding JSON')
         except KeyError:
-            print('Unknown message type in LAN message')
+            log('Unknown message type in LAN message')
         (data, addr) = maybeRecvLan()
 
 def sendLan():
@@ -95,7 +98,10 @@ def sendLan():
             if time.time() - lastseen > 600:
                 del lanclients[addr]
             else:
-                lan.sendto(ujson.dumps(posToDict(pos)).encode('utf-8'), addr)
+                try:
+                    lan.sendto(ujson.dumps(posToDict(pos)).encode('utf-8'), addr)
+                except OSError:
+                    pass # Maybe the client went away?
 
 def sendWan():
     for pos in posUpdates:
@@ -117,7 +123,7 @@ def handleLanPosUpdate(msg, addr):
         posUpdates.append(pos)
         positions[pos.callsign] = (posToDict(pos), time.time())
     except KeyError:
-        print('LAN position update missing required fields')
+        log('LAN position update missing required fields')
 
 lanHandlers = {
     'getall' : handleLanGetAll,
@@ -130,5 +136,5 @@ while True:
     sendWan()
     recvWan()
     sendLan()
-    time.sleep_ms(50)
+    time.sleep_ms(500)
     posUpdates = []

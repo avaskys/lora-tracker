@@ -8,7 +8,7 @@ wlan = WLAN() # get current object, without changing the mode
 
 if machine.reset_cause() != machine.SOFT_RESET:
     #wlan.init(mode=WLAN.STA)
-    wlan.init(mode=WLAN.AP, ssid='tracker', auth=(WLAN.WPA2,'followme'), channel=7, antenna=WLAN.INT_ANT)
+    wlan.init(mode=WLAN.AP, ssid='tracker', auth=(WLAN.WPA2,'followme'), channel=11, antenna=WLAN.INT_ANT)
     wlan.ifconfig(config=('192.168.0.254', '255.255.255.0', '192.168.0.254', '8.8.8.8'), id=1)
 
 #if not wlan.isconnected():
