@@ -63,6 +63,7 @@ def recvWan():
             if pos.magic1 == MAGIC1 and pos.magic2 == MAGIC2:
                 posUpdates.append(pos)
                 positions[pos.callsign] = (posToDict(pos), time.time())
+                log(pos.rhheader)
             else:
                 log('Unexpected WAN magic numbers: saw 0x%x 0x%x' % (pos.magic1, pos.magic2))
         else:
@@ -120,7 +121,7 @@ def handleLanGetAll(msg, addr):
 
 def handleLanPosUpdate(msg, addr):
     try:
-        pos = PositionUpdate(0, MAGIC1, MAGIC2, msg['callsign'].encode('utf-8'), msg['lat'], msg['long'], msg['isaccurate'])
+        pos = PositionUpdate(65535, MAGIC1, MAGIC2, msg['callsign'].encode('utf-8'), msg['lat'], msg['long'], msg['isaccurate'])
         posUpdates.append(pos)
         positions[pos.callsign] = (posToDict(pos), time.time())
     except KeyError:
