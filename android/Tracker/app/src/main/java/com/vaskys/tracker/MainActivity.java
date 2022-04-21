@@ -1,22 +1,26 @@
 package com.vaskys.tracker;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.audiofx.BassBoost;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.support.constraint.ConstraintLayout;
-import android.support.v4.content.LocalBroadcastManager;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import org.mapsforge.core.model.LatLong;
@@ -40,9 +44,17 @@ import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
     // name of the map file in the external storage
-    private static final String[] MAP_FILES = { "hood.map", "brc.map" };
+    private static final String[] MAP_FILES = { "hood.map", "brc.map", "ab.map" };
+
+    final String[] PERMISSIONS = {
+            Manifest.permission.FOREGROUND_SERVICE,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.INTERNET,
+    };
+
+    private ActivityResultLauncher<String[]> multiplePermissionLauncher;
 
     private MapView mapView;
     private PosReceiver posReceiver = new PosReceiver();
@@ -70,9 +82,39 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void askPermissions() {
+        if (!hasPermissions(PERMISSIONS)) {
+            Log.d("PERMISSIONS", "Launching multiple contract permission launcher for ALL required permissions");
+            multiplePermissionLauncher.launch(PERMISSIONS);
+        } else {
+            Log.d("PERMISSIONS", "All permissions are already granted");
+        }
+    }
+
+    private boolean hasPermissions(String[] permissions) {
+        if (permissions != null) {
+            for (String permission : permissions) {
+                if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                    Log.d("PERMISSIONS", "Permission is not granted: " + permission);
+                    return false;
+                }
+                Log.d("PERMISSIONS", "Permission already granted: " + permission);
+            }
+            return true;
+        }
+        return false;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        multiplePermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), isGranted -> {
+            Log.d("PERMISSIONS", "Launcher result: " + isGranted.toString());
+            if (!isGranted.containsValue(false)) {
+                startLocationWatcher();
+            }
+        });
 
         try {
             copyAssets();
@@ -110,13 +152,16 @@ public class MainActivity extends Activity {
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
         LatLong loc;
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isSF", false)) {
-            // SF
-            loc = new LatLong(37.765730, -122.418266);
-        }
-        else {
-            // BRC
-            loc = new LatLong(40.786315, -119.206562);
+        switch (PreferenceManager.getDefaultSharedPreferences(this).getString("location", "SF")) {
+            case "SF":
+                loc = new LatLong(37.765730, -122.418266);
+                break;
+            case "BRC":
+                loc = new LatLong(40.786315, -119.206562);
+                break;
+            default:
+                // Afrikaburn
+                loc = new LatLong(-32.51704, 19.95637);
         }
         this.mapView.setCenter(loc);
         this.mapView.setZoomLevel((byte) 14);
@@ -126,6 +171,13 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
 
+        askPermissions();
+        if (hasPermissions(PERMISSIONS)) {
+            startLocationWatcher();
+        }
+    }
+
+    private void startLocationWatcher() {
         IntentFilter filter = new IntentFilter(LocationWatcherService.POS_BROADCAST_ACTION);
         LocalBroadcastManager.getInstance(this).registerReceiver(posReceiver, filter);
 

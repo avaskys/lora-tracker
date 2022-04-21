@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Tracker</string>
+    <string-array name="locations">
+        <item>SF</item>
+        <item>BRC</item>
+        <item>AB</item>
+    </string-array>
 </resources>

@@ -1,6 +1,8 @@
 package com.vaskys.tracker;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
@@ -8,7 +10,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -61,15 +63,25 @@ public class LocationWatcherService extends Service {
 
             Intent notificationIntent = new Intent(this, LocationWatcherService.class);
             notificationIntent.setAction(ACTION_STOP);
-            PendingIntent pendingIntent = PendingIntent.getService(this, 0, notificationIntent, 0);
+            PendingIntent pendingIntent = PendingIntent.getService(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+
+            String CHANNEL_ID = "tracker_notif";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Tracker", importance);
+            channel.setDescription("Burn Location Tracker");
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
 
             Notification notification =
                     new Notification.Builder(this)
-                            .setContentTitle("Burning Man Tracker")
+                            .setContentTitle("Burn Location Tracker")
                             .setContentText("Tracking location...")
                             .setContentIntent(pendingIntent)
                             .setSmallIcon(R.drawable.pointer_bubble_normal)
                             .setTicker("Ticker???")
+                            .setChannelId(CHANNEL_ID)
                             .build();
 
             startForeground(ONGOING_NOTIFICATION_ID, notification);
@@ -107,7 +119,7 @@ public class LocationWatcherService extends Service {
     @Override
     public void onDestroy() {
         locationClient.removeLocationUpdates(locCb);
-        sendQueue.add(null);
+        sendQueue.add(new byte[0]);
         if (sock != null)
             sock.close();
         sock = null;
@@ -129,7 +141,7 @@ public class LocationWatcherService extends Service {
         public void run() {
             try {
                 byte[] toSend;
-                while ((toSend = sendQueue.take()) != null) {
+                while ((toSend = sendQueue.take()).length > 0) {
                     try {
                         String ip = PreferenceManager.getDefaultSharedPreferences(LocationWatcherService.this).getString("ip", "192.168.0.254");
                         InetAddress addr = InetAddress.getByName(ip);
