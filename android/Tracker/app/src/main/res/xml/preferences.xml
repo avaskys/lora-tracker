@@ -11,7 +11,10 @@
         android:key="interval"
         android:inputType="number"
         android:summary="Interval, in seconds, to send updates" />
-    <CheckBoxPreference android:title="Location: SF"
-        android:key="isSF"
-        android:summary="Check if testing the tracker in San Francisco" />
+    <ListPreference
+        android:defaultValue="1"
+        android:entries="@array/locations"
+        android:entryValues="@array/locations"
+        android:key="location"
+        android:title="Location" />
 </PreferenceScreen>
